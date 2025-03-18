@@ -16,7 +16,7 @@ EX2_QL_CONSTANTS = EX2_CONSTANTS.copy()
 EX2_QL_CONSTANTS["total_eps"] = 10000
 
 EX3_CARTPOLE_CONSTANTS = {
-    "env": "CartPole-v1",
+    "env": "CartPole-v0",
     "gamma": 0.99,
     "episode_length": 200,
     "max_time": 30 * 60,

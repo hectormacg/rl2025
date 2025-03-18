@@ -261,6 +261,6 @@ if __name__ == "__main__":
                 pickle.dump(results, f)
 
     else:
-        _ = traintrain(env, CONFIG)
+        _ = train(env, CONFIG)
 
     env.close()

@@ -7,8 +7,7 @@ import os.path
 import gymnasium as gym
 import numpy as np
 import torch
-from fontTools.misc.bezierTools import epsilon
-from torch import Tensor
+# from torch import Tensor
 from torch.distributions.categorical import Categorical
 import torch.nn
 from torch.optim import Adam
@@ -260,8 +259,18 @@ class DQN(Agent):
         :return (sample from self.action_space): action the agent should perform
         """
 
-        ### PUT YOUR CODE HERE ###
-            
+        # self.schedule_hyperparameters()
+        if explore:
+           if np.random.uniform(0, 1, 1)<self.epsilon :
+               action=self.action_space.sample()
+           else:
+               obs_tensor = torch.tensor(obs, dtype=torch.float32)
+               q_values = self.critics_net(obs_tensor)
+               action = np.argmax(q_values.detach().numpy())
+        else:
+            obs_tensor = torch.tensor(obs, dtype=torch.float32)
+            q_values = self.critics_net(obs_tensor)
+            action = np.argmax(q_values.detach().numpy())
         return action
 
     def update(self, batch: Transition) -> Dict[str, float]:
@@ -283,26 +292,29 @@ class DQN(Agent):
         actions = actions.long()
         
         # Calculate current Q-values
-         ### PUT YOUR CODE HERE ###
+        q_values = self.critics_net(states)
+        q_values_taken = q_values.gather(1, actions).squeeze()
 
         # Calculate target Q-values
-        # with torch.no_grad():
+        with torch.no_grad():
             # Get max Q-value for next state from target network
-            ### PUT YOUR CODE HERE ### 
+            q_values_next = self.critics_target(next_states)
+            target_q_values, _ = torch.max(q_values_next, dim=1)
             # Calculate target Q-value using Bellman equation
-            ### PUT YOUR CODE HERE ###
-        
+            target_q_values = rewards.squeeze() + self.gamma * (1 - dones.squeeze()) * target_q_values
+
         # Calculate loss (Mean Squared Error)
-        ### PUT YOUR CODE HERE ###
+        q_loss = torch.nn.functional.mse_loss(q_values_taken, target_q_values)
         
         # Optimize the critic network
-        ### PUT YOUR CODE HERE ###
+        self.critics_optim.zero_grad()  # Clear previous gradients
+        q_loss.backward()  # Compute gradients
+        self.critics_optim.step()  # Update weights
         
         # Update target network if it's time
         self.update_counter += 1
-        # if self.update_counter % self.target_update_freq == 0:
-
-            ### PUT YOUR CODE HERE ###
+        if self.update_counter % self.target_update_freq == 0:
+            self.critics_target.hard_update(self.critics_net)
         
         return {"q_loss": q_loss.item()} # item() turns a one-element tensor into a standard python number
 
@@ -401,12 +413,11 @@ class DiscreteRL(Agent):
             # Return action with highest Q-value (randomly break ties)
             return np.random.choice(np.flatnonzero(q_values == np.max(q_values)))
 
-    def update(
-        self, obs: np.ndarray, action: int, reward: float, n_obs: np.ndarray, done: bool
-    ) -> float:
+    def update(self, obs: np.ndarray, action: int, reward: float, n_obs: np.ndarray, done: bool) -> float:
         """Updates the Q-table based on agent experience using Q-learning algorithm.
 
-         ** YOU NEED TO IMPLEMENT THIS FUNCTION FOR Q3 BUT YOU CAN REUSE YOUR Q LEARNING CODE FROM Q2 (you can include it here or you adapt the files from Q2 to work of the mountain car problem **
+         ** YOU NEED TO IMPLEMENT THIS FUNCTION FOR Q3 BUT YOU CAN REUSE YOUR Q LEARNING CODE FROM Q2
+          (you can include it here or you adapt the files from Q2 to work of the mountain car problem **
 
         Implements the Q-learning update equation:
         Q(s,a) = Q(s,a) + alpha * (r + gamma * max_a' Q(s',a') - Q(s,a))
@@ -418,14 +429,14 @@ class DiscreteRL(Agent):
         :param done (bool): flag indicating whether episode is done
         :return (float): updated Q-value for current observation-action pair
         """
-
-
         # Convert continuous observations to discrete state identifiers
         state = self.discretize_state(obs)         # Current state
         next_state = self.discretize_state(n_obs)   # Next state
 
-        ### PUT YOUR CODE HERE ###
-
+        best_next_action = max(self.q_table[(next_state, a)] for a in range(self.n_acts))
+        target = reward + (self.gamma * best_next_action * (not done))  # No future reward if terminal state
+        self.q_table[(state, action)] += self.alpha * (target - self.q_table[(state, action)])
+        # return self.q_table[(obs, action)]
         return {f"Q_value_{state}" : self.q_table[(state, action)]}
 
 

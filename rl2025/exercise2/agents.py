@@ -107,6 +107,7 @@ class QLearningAgent(Agent):
         """
 
         best_next_action = max(self.q_table[(n_obs, a)] for a in range(self.n_acts))
+
         target = reward + (self.gamma * best_next_action * (not done))  # No future reward if terminal state
         self.q_table[(obs, action)] += self.alpha * (target - self.q_table[(obs, action)])
         return self.q_table[(obs, action)]
