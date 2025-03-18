@@ -358,7 +358,7 @@ class DiscreteRL(Agent):
         self.epsilon: float = epsilon
         self.alpha: float = alpha
         self.n_acts: int = action_space.n
-        
+        self.k:int=kwargs['k']
         super().__init__(action_space=action_space, observation_space=observation_space)
         
         # Initialize Q-table as defaultdict with default value of 0 for any new state-action pair
@@ -367,9 +367,9 @@ class DiscreteRL(Agent):
 
         # For mountain car environment discretization - creates k bins for each dimension, e.g. k=8
         # Position range: -1.2 to 0.6 (8 bins)
-        self.position_bins = np.linspace(-1.2, 0.6, k)
+        self.position_bins = np.linspace(-1.2, 0.6, self.k)
         # Velocity range: -0.07 to 0.07 (8 bins)
-        self.velocity_bins = np.linspace(-0.07, 0.07, k)
+        self.velocity_bins = np.linspace(-0.07, 0.07, self.k)
 
     def discretize_state(self, obs: np.ndarray) -> int:
         """Discretizes a continuous state observation into a unique integer identifier.

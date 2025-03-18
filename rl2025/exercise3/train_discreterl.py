@@ -36,6 +36,7 @@ MOUNTAINCAR_CONFIG = {
     "exploration_fraction": None, # For linear epsilon decay, fraction of training time at which epsilon=epsilon_min
     "buffer_capacity": int(1e6),
     "plot_loss": False, # SET TRUE FOR 3.3 (Understanding the Loss)
+    "k":20,
 }
 
 MOUNTAINCAR_CONFIG.update(MOUNTAINCAR_CONSTANTS)
@@ -66,6 +67,7 @@ CARTPOLE_CONFIG = {
     "eval_episodes": 100,
     "hidden_size": (64,),
     "learning_rate": 1e-3,
+    "k": 20,
 }
 
 CARTPOLE_CONFIG.update(CARTPOLE_CONSTANTS)
