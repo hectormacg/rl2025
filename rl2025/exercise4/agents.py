@@ -1,6 +1,7 @@
 import os
 import gymnasium as gym
 import numpy as np
+# from tests.envs.test_actions import action_configs
 from torch.optim import Adam
 from typing import Dict, Iterable
 import torch
@@ -178,9 +179,13 @@ class DDPG(Agent):
         :param explore (bool): flag indicating whether we should explore
         :return (sample from self.action_space): action the agent should perform
         """
-        ### PUT YOUR CODE HERE ###
-        raise NotImplementedError("Needed for Q4")
-
+        obs_tensor = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
+        action = self.actor(obs_tensor).squeeze(0)
+        if explore:
+            noise = self.noise.sample().to(action.device)
+            action += noise
+        action = torch.clamp(action, self.lower_action_bound, self.upper_action_bound)
+        return action.cpu().detach().numpy()
     def update(self, batch: Transition) -> Dict[str, float]:
         """Update function for DQN
 
@@ -193,12 +198,47 @@ class DDPG(Agent):
         :param batch (Transition): batch vector from replay buffer
         :return (Dict[str, float]): dictionary mapping from loss names to loss values
         """
-        ### PUT YOUR CODE HERE ###
-        raise NotImplementedError("Needed for Q4")
+        # Unpack the batch
+        states, actions, next_states, rewards, dones = batch
 
-        q_loss = 0.0
-        p_loss = 0.0
+        # Concatenate states and actions for critic input
+        state_action_input = torch.cat([states, actions], dim=1)
+
+        # Calculate current Q-values
+        q_values = self.critic(state_action_input).squeeze()
+
+        # Compute target Q-values using the target networks
+        with torch.no_grad():
+            actions_next_states = self.actor_target(next_states)
+            state_action_next_input = torch.cat([next_states, actions_next_states], dim=1)
+            q_values_next = self.critic_target(state_action_next_input)
+            target_q_values = rewards.squeeze() + self.gamma * (1 - dones.squeeze()) * q_values_next.squeeze()
+
+        # Critic loss (Mean Squared Error)
+        q_loss = torch.nn.functional.mse_loss(q_values, target_q_values)
+
+        # Optimize the critic network
+        self.critic_optim.zero_grad()
+        q_loss.backward()
+        self.critic_optim.step()
+
+        # Optimize the actor network
+        actions_pred = self.actor(states)
+        state_action_input = torch.cat([states, actions_pred], dim=1)
+        q_values = self.critic(state_action_input).squeeze()
+
+        # Actor loss (maximize Q-values)
+        p_loss = -torch.mean(q_values)  # Fix: Negative sign
+
+        self.policy_optim.zero_grad()
+        p_loss.backward()
+        self.policy_optim.step()
+
+        # Soft update for target networks
+        self.actor_target.soft_update(self.actor, self.tau)
+        self.critic_target.soft_update(self.critic, self.tau)  # Fix: Should use `self.critic`
+
         return {
-            "q_loss": q_loss,
-            "p_loss": p_loss,
+            "q_loss": q_loss.item(),  # Convert tensor to scalar
+            "p_loss": p_loss.item(),  # Convert tensor to scalar
         }
