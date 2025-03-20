@@ -215,13 +215,14 @@ class DQN(Agent):
             epsilon=max(slope*x+epsilon_start, epsilon_min)
             return epsilon
 
-        def epsilon_exponential_decay(timestep, epsilon_start, epsilon_min, decay_factor):
+        def epsilon_exponential_decay(timestep, max_timestep, epsilon_start, epsilon_min, decay_factor):
             """Exponential epsilon decay strategy
             
             Exponentially decays epsilon from epsilon_start to epsilon_min using decay_factor
             """
-            ### PUT YOUR CODE HERE ###
-            return # current epsilon
+            x=timestep/max_timestep
+            epsilon=max((decay_factor**x)*epsilon_start, epsilon_min)
+            return epsilon
 
         if self.epsilon_decay_strategy == "constant":
             pass
@@ -237,7 +238,8 @@ class DQN(Agent):
         elif self.epsilon_decay_strategy == "exponential":
             # exponential decay
             self.epsilon = epsilon_exponential_decay(
-                timestep, 
+                timestep,
+                max_timestep,
                 self.epsilon_start, 
                 self.epsilon_min, 
                 self.epsilon_exponential_decay_factor
