@@ -114,7 +114,7 @@ class ValueIteration(MDPSolver):
             sum_next_state_r = np.sum(next_state_r, axis=1)
             index_max = np.argmax(sum_next_state_r)
             policy[i, index_max] = 1
-            return policy
+        return policy
 
     def solve(self, theta: float = 1e-6) -> Tuple[np.ndarray, np.ndarray]:
         """Solves the MDP
@@ -159,8 +159,15 @@ class PolicyIteration(MDPSolver):
             It is indexed as (State) where V[State] is the value of state 'State'
         """
         V = np.zeros(self.state_dim)
-        ### PUT YOUR CODE HERE ###
-        raise NotImplementedError("Needed for Q1")
+        delta = self.theta
+        while delta >= self.theta:
+            delta = 0
+            for state, i in self.mdp._state_dict.items():
+                v = V.copy()
+                next_state_r = self.mdp.P[i] * (self.mdp.R[i] + self.gamma * V)
+                sum_next_state_r = np.sum(next_state_r, axis=1)
+                V[i]=np.sum(sum_next_state_r*policy[i])
+                delta = max(delta, abs(v[i] - V[i]))
         return np.array(V)
 
     def _policy_improvement(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -184,27 +191,42 @@ class PolicyIteration(MDPSolver):
         """
         policy = np.zeros([self.state_dim, self.action_dim])
         V = np.zeros([self.state_dim])
-        ### PUT YOUR CODE HERE ###
-        raise NotImplementedError("Needed for Q1")
+        policy_stable = False
+        while not policy_stable:
+            policy_stable = True
+            old_policy = policy.copy()
+            for i in range(self.state_dim):
+                next_state_r = self.mdp.P[i] * (self.mdp.R[i] + self.gamma * V)
+                sum_next_state_r = np.sum(next_state_r, axis=1)
+                index_max = np.argmax(sum_next_state_r)
+                policy[i, index_max] = 1
+                mask = np.zeros_like(policy[i, :], dtype=bool)
+                mask[index_max] = True
+                policy[i, ~mask] = 0
+                if any(policy[i, :] != old_policy[i, :]):
+                    policy_stable = False
+            if not policy_stable:
+                V = self._policy_eval(policy)
         return policy, V
 
+
     def solve(self, theta: float = 1e-6) -> Tuple[np.ndarray, np.ndarray]:
-        """Solves the MDP
+            """Solves the MDP
 
-        This function compiles the MDP and then calls the
-        policy improvement function that the student must implement
-        and returns the solution
+            This function compiles the MDP and then calls the
+            policy improvement function that the student must implement
+            and returns the solution
 
-        **DO NOT CHANGE THIS FUNCTION**
+            **DO NOT CHANGE THIS FUNCTION**
 
-        :param theta (float, optional): stop threshold, defaults to 1e-6
-        :return (Tuple[np.ndarray of float with dim (num of states, num of actions),
-                       np.ndarray of float with dim (num of states)]):
-            Tuple of calculated policy and value function
-        """
-        self.mdp.ensure_compiled()
-        self.theta = theta
-        return self._policy_improvement()
+            :param theta (float, optional): stop threshold, defaults to 1e-6
+            :return (Tuple[np.ndarray of float with dim (num of states, num of actions),
+                           np.ndarray of float with dim (num of states)]):
+                Tuple of calculated policy and value function
+            """
+            self.mdp.ensure_compiled()
+            self.theta = theta
+            return self._policy_improvement()
 
 
 if __name__ == "__main__":
@@ -233,10 +255,10 @@ if __name__ == "__main__":
     print("Value Function")
     print(valuefunc)
 
-    # solver = PolicyIteration(mdp, CONSTANTS["gamma"])
-    # policy, valuefunc = solver.solve()
-    # print("---Policy Iteration---")
-    # print("Policy:")
-    # print(solver.decode_policy(policy))
-    # print("Value Function")
-    # print(valuefunc)
+    solver = PolicyIteration(mdp, CONSTANTS["gamma"])
+    policy, valuefunc = solver.solve()
+    print("---Policy Iteration---")
+    print("Policy:")
+    print(solver.decode_policy(policy))
+    print("Value Function")
+    print(valuefunc)
