@@ -80,8 +80,15 @@ class ValueIteration(MDPSolver):
             E.g. V[3] returns the computed value for state 3
         """
         V = np.zeros(self.state_dim)
-        ### PUT YOUR CODE HERE ###
-        raise NotImplementedError("Needed for Q1")
+        delta = theta
+        while delta >= theta:
+            delta = 0
+            for state, i in self.mdp._state_dict.items():
+                v = V.copy()
+                next_state_r = self.mdp.P[i] * (self.mdp.R[i] + self.gamma * V)
+                sum_next_state_r = np.sum(next_state_r, axis=1)
+                V[i]=np.max(sum_next_state_r)
+                delta = max(delta, abs(v[i] - V[i]))
         return V
 
     def _calc_policy(self, V: np.ndarray) -> np.ndarray:
@@ -102,9 +109,12 @@ class ValueIteration(MDPSolver):
             policy[S, OTHER_ACTIONS] = 0
         """
         policy = np.zeros([self.state_dim, self.action_dim])
-        ### PUT YOUR CODE HERE ###
-        raise NotImplementedError("Needed for Q1")
-        return policy
+        for state, i in self.mdp._state_dict.items():
+            next_state_r = self.mdp.P[i] * (self.mdp.R[i] + self.gamma * V)
+            sum_next_state_r = np.sum(next_state_r, axis=1)
+            index_max = np.argmax(sum_next_state_r)
+            policy[i, index_max] = 1
+            return policy
 
     def solve(self, theta: float = 1e-6) -> Tuple[np.ndarray, np.ndarray]:
         """Solves the MDP
@@ -223,10 +233,10 @@ if __name__ == "__main__":
     print("Value Function")
     print(valuefunc)
 
-    solver = PolicyIteration(mdp, CONSTANTS["gamma"])
-    policy, valuefunc = solver.solve()
-    print("---Policy Iteration---")
-    print("Policy:")
-    print(solver.decode_policy(policy))
-    print("Value Function")
-    print(valuefunc)
+    # solver = PolicyIteration(mdp, CONSTANTS["gamma"])
+    # policy, valuefunc = solver.solve()
+    # print("---Policy Iteration---")
+    # print("Policy:")
+    # print(solver.decode_policy(policy))
+    # print("Value Function")
+    # print(valuefunc)
