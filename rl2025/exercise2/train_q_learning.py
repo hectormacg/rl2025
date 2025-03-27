@@ -1,24 +1,17 @@
 import gymnasium as gym
+import numpy as np
 from tqdm import tqdm
-
 from rl2025.constants import EX2_QL_CONSTANTS as CONSTANTS
 from rl2025.exercise2.agents import QLearningAgent
 from rl2025.exercise2.utils import evaluate
-
-CONFIG = {
-    "eval_freq": 1000, # keep this unchanged
-    "alpha": 0.05,
-    "epsilon": 0.9,
-    "gamma": 0.99,
-}
-CONFIG.update(CONSTANTS)
+from rl2025.util.result_processing import Run, rank_runs, get_best_saved_run
 
 
 def q_learning_eval(
         env,
         config,
         q_table,
-        render=True):
+        render=False):
     """
     Evaluate configuration of Q-learning on given environment when initialised with given Q-table
 
@@ -100,6 +93,36 @@ def train(env, config):
     return total_reward, evaluation_return_means, evaluation_negative_returns, agent.q_table
 
 
+# if __name__ == "__main__":
+#     env = gym.make(CONFIG["env"])
+#     total_reward, _, _, q_table = train(env, CONFIG)
+import pandas as pd
+import copy  # To avoid modifying CONFIG in-place
+
 if __name__ == "__main__":
-    env = gym.make(CONFIG["env"])
-    total_reward, _, _, q_table = train(env, CONFIG)
+    CONFIGS = [
+        {"eval_freq": 1000, "alpha": 0.05, "epsilon": 0.9, "gamma": 0.99},
+        {"eval_freq": 1000, "alpha": 0.05, "epsilon": 0.9, "gamma": 0.8}
+    ]
+
+    results = []  # List to store run results
+
+    for i in range(10):  # 10 runs per configuration
+        for index, CONFIG in enumerate(CONFIGS):
+            config_copy = copy.deepcopy(CONFIG)  # Avoid modifying the original CONFIG
+            config_copy.update(CONSTANTS)
+
+            env = gym.make(config_copy["env"])
+            total_reward, eval_means, neg_returns, _ = train(env, config_copy)
+
+            results.append({
+                "total_reward": total_reward,
+                "evaluation_return_means": eval_means.tolist() if hasattr(eval_means, "tolist") else eval_means,
+                "evaluation_negative_returns": neg_returns,
+                "configuration": f"config_{index}"
+            })
+
+    # Convert to DataFrame
+    df_results = pd.DataFrame(results)
+    df_results['last_return_mean']=df_results.evaluation_return_means.apply(lambda x: x[-1])
+    df_results.to_csv("results_q_learning.csv")

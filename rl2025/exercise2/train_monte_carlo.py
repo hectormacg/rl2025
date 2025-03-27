@@ -5,12 +5,12 @@ from rl2025.exercise2.agents import MonteCarloAgent
 from rl2025.exercise2.utils import evaluate
 from tqdm import tqdm
 
-CONFIG = {
-    "eval_freq": 5000, # keep this unchanged
-    "epsilon": 0.9,
-    "gamma": 0.99,
-}
-CONFIG.update(CONSTANTS)
+# CONFIG = {
+#     "eval_freq": 5000, # keep this unchanged
+#     "epsilon": 0.9,
+#     "gamma": 0.99,
+# }
+# CONFIG.update(CONSTANTS)
 
 
 
@@ -104,7 +104,37 @@ def train(env, config):
 
     return total_reward, evaluation_return_means, evaluation_negative_returns, agent.q_table
 
+#
+# if __name__ == "__main__":
+#     env = gym.make(CONFIG["env"], is_slippery=False)
+#     total_reward, _, _, q_table = train(env, CONFIG)
+import pandas as pd
+import copy  # To avoid modifying CONFIG in-place
 
 if __name__ == "__main__":
-    env = gym.make(CONFIG["env"], is_slippery=False)
-    total_reward, _, _, q_table = train(env, CONFIG)
+    CONFIGS = [
+        {"eval_freq": 5000,  "epsilon": 0.9, "gamma": 0.99},
+        {"eval_freq": 5000,  "epsilon": 0.9, "gamma": 0.8}
+    ]
+
+    results = []  # List to store run results
+
+    for i in range(10):  # 10 runs per configuration
+        for index, CONFIG in enumerate(CONFIGS):
+            config_copy = copy.deepcopy(CONFIG)  # Avoid modifying the original CONFIG
+            config_copy.update(CONSTANTS)
+
+            env = gym.make(config_copy["env"])
+            total_reward, eval_means, neg_returns, _ = train(env, config_copy)
+
+            results.append({
+                "total_reward": total_reward,
+                "evaluation_return_means": eval_means.tolist() if hasattr(eval_means, "tolist") else eval_means,
+                "evaluation_negative_returns": neg_returns,
+                "configuration": f"config_{index}"
+            })
+
+    # Convert to DataFrame
+    df_results = pd.DataFrame(results) # Verify structure
+    df_results['last_return_mean']=df_results.evaluation_return_means.apply(lambda x: x[-1])
+    df_results.to_csv("results_montecarlo.csv")
